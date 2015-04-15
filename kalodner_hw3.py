@@ -28,11 +28,11 @@ test_set = np.load("testTriplets.npy").astype('int64', casting='unsafe')
 graph = gt.Graph()
 graph.add_edge_list(train_set[:,[0,1]])
 
-data = np.ones((train_set.shape[0]))
+data = np.ones((train_set.shape[0])) == 1.0
 columns = train_set[:,0]
 rows = train_set[:,1]
 
-relMatrix = csr_matrix((data, (rows, columns)), shape=(444075, 444075))
+relMatrix = csr_matrix((data, (columns, rows)), shape=(444075, 444075))
 
 # relMatrix = lil_matrix((444075,444075), dtype=np.bool)
 # for i in range(444075):

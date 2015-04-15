@@ -1,4 +1,5 @@
 import numpy as np
+import scipy
 from scipy.sparse import csr_matrix
 import graph_tool.all as gt
 from sklearn import cross_validation
@@ -33,6 +34,12 @@ columns = train_set[:,0]
 rows = train_set[:,1]
 
 relMatrix = csr_matrix((data, (columns, rows)), shape=(444075, 444075))
+
+indexes = np.arange(444075)
+indexes = indexes[indexes != 22506]
+
+clf = LinearSVC(class_weight="auto").fit(relMatrix[:, indexes], relMatrix[:, 22506].toarray().ravel())
+
 
 # relMatrix = lil_matrix((444075,444075), dtype=np.bool)
 # for i in range(444075):

@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.sparse import csr_matrix
 import graph_tool.all as gt
 from sklearn import cross_validation
 from sklearn import metrics
@@ -27,26 +28,37 @@ test_set = np.load("testTriplets.npy").astype('int64', casting='unsafe')
 graph = gt.Graph()
 graph.add_edge_list(train_set[:,[0,1]])
 
+data = np.ones((train_set.shape[0]))
+columns = train_set[:,0]
+rows = train_set[:,1]
+
+relMatrix = csr_matrix((data, (rows, columns)), shape=(444075, 444075))
+
+# relMatrix = lil_matrix((444075,444075), dtype=np.bool)
+# for i in range(444075):
+	# relMatrix[i, train_set[train_set[:,0] == i][:,1]] = 1
+
+
 # weight = graph.new_edge_property("int32_t")
 # for edge in graph.edges():
 # 	weight[edge] = train_set[(train_set[:,0] == graph.vertex_index[edge.source()]) & (train_set[:,1] == graph.vertex_index[edge.target()]) ][0][2]
 
-print("Calculated weights")
+# print("Calculated weights")
 
-distanceList = []
-reverseDistanceList = []
-weightedDistanceList = []
-for x in test_set:
-	distanceList.append(distance(graph, x[0], x[1]))
-	reverseDistanceList.append(reverseDistance(graph, x[0], x[1]))
-	weightedDistanceList.append(weightedDistance(graph, weight, x[0], x[1]))
+# distanceList = []
+# reverseDistanceList = []
+# weightedDistanceList = []
+# for x in test_set:
+# 	distanceList.append(distance(graph, x[0], x[1]))
+# 	reverseDistanceList.append(reverseDistance(graph, x[0], x[1]))
+# 	weightedDistanceList.append(weightedDistance(graph, weight, x[0], x[1]))
 
-print("Calculated distanceData")
+# print("Calculated distanceData")
 
-distanceArray = np.array(distanceList)
-reverseArray = np.array(reverseDistanceList)
-weightedArray = np.array(weightedDistanceList)
-allDistance = np.transpose(np.vstack((distanceArray, reverseArray, weightedArray)))
+# distanceArray = np.array(distanceList)
+# reverseArray = np.array(reverseDistanceList)
+# weightedArray = np.array(weightedDistanceList)
+# allDistance = np.transpose(np.vstack((distanceArray, reverseArray, weightedArray)))
 
 
 # X_train, X_test, y_train, y_test = cross_validation.train_test_split(allDistance, test_set[:,2], test_size=0.4, random_state=0)

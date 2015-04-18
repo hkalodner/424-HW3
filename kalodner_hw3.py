@@ -39,7 +39,18 @@ outputAddresses = np.unique(test_set[:,1])
 indexes = np.arange(444075)
 
 inputRows = test_set[test_set[:,1] == 1]
-indexes = indexes[indexes != 22506]
+columnIndexes = indexes[indexes != 22506]
+
+def predictForOutput(addr):
+	fromAddresses = test_set[test_set[:, 1] == addr][:, 0]
+	columnIndexes = indexes[indexes != addr]
+	rowIndexes = np.delete(indexes, fromAddresses)
+	train_x = relMatrix[:, columnIndexes][rowIndexes, :]
+	train_y = relMatrix[:, addr][rowIndexes, :].toarray().ravel()
+	clf = LinearSVC(class_weight="auto").fit(train_x, train_y)
+
+	test_x = relMatrix[:, columnIndexes][fromAddresses, :]
+	return clf.predict(test_x)
 
 # eliminate column of 'to address'
 # eliminate rows of linked 'from addresses'

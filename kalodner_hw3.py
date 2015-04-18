@@ -5,9 +5,12 @@ import graph_tool.all as gt
 from sklearn import cross_validation
 from sklearn import metrics
 
+
+from sklearn.decomposition import TruncatedSVD
 from sklearn.svm import LinearSVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import SGDClassifier
+from sklearn.tree import DecisionTreeClassifier
 
 def distance(g, inV, outV):
 	return gt.shortest_distance(g, source=g.vertex(inV), target=g.vertex(outV))
@@ -47,10 +50,18 @@ def predictForOutput(addr):
 	rowIndexes = np.delete(indexes, fromAddresses)
 	train_x = relMatrix[:, columnIndexes][rowIndexes, :]
 	train_y = relMatrix[:, addr][rowIndexes, :].toarray().ravel()
-	clf = LinearSVC(class_weight="auto").fit(train_x, train_y)
 
+	clf = KNeighborsClassifier(n_neighbors=10, p=2)
+	clf.fit(train_x, train_y)
 	test_x = relMatrix[:, columnIndexes][fromAddresses, :]
-	return clf.predict(test_x)
+	test_y = test_set[test_set[:, 1] == addr][:, 2]
+	predicted = clf.predict(test_x)
+	print(clf.score(test_x, test_y))
+	print(metrics.confusion_matrix(test_y, predicted))
+	# print(test_y)
+	return predicted
+
+print(predictForOutput(3))
 
 # eliminate column of 'to address'
 # eliminate rows of linked 'from addresses'

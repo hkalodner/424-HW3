@@ -35,16 +35,16 @@ rows = train_set[:,1]
 
 relMatrix = csr_matrix((data, (columns, rows)), shape=(444075, 444075))
 
+outputAddresses = np.unique(test_set[:,1])
 indexes = np.arange(444075)
+
+inputRows = test_set[test_set[:,1] == 1]
 indexes = indexes[indexes != 22506]
 
-clf = LinearSVC(class_weight="auto").fit(relMatrix[:, indexes], relMatrix[:, 22506].toarray().ravel())
+# eliminate column of 'to address'
+# eliminate rows of linked 'from addresses'
 
-
-# relMatrix = lil_matrix((444075,444075), dtype=np.bool)
-# for i in range(444075):
-	# relMatrix[i, train_set[train_set[:,0] == i][:,1]] = 1
-
+# clf = LinearSVC(class_weight="auto").fit(relMatrix[:, indexes], relMatrix[:, 22506].toarray().ravel())
 
 # weight = graph.new_edge_property("int32_t")
 # for edge in graph.edges():

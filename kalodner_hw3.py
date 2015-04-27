@@ -5,12 +5,14 @@ import graph_tool.all as gt
 from sklearn import cross_validation
 from sklearn import metrics
 
-
+from sklearn.metrics import classification_report
 from sklearn.decomposition import TruncatedSVD
 from sklearn.svm import LinearSVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import SGDClassifier
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import BernoulliNB, MultinomialNB
+from sklearn.feature_selection import SelectKBest, SelectPercentile, VarianceThreshold
 
 def distance(g, inV, outV):
     return gt.shortest_distance(g, source=g.vertex(inV), target=g.vertex(outV))
@@ -35,7 +37,8 @@ test_set = np.load("testTriplets.npy").astype('int64', casting='unsafe')
 graph = gt.Graph()
 graph.add_edge_list(train_set[:,[0,1]])
 
-data = np.ones((train_set.shape[0])) == 1.0
+# data = np.ones((train_set.shape[0])) == 1.0
+data = train_set[:, 2]
 columns = train_set[:,0]
 rows = train_set[:,1]
 
@@ -45,27 +48,50 @@ def predictForOutput(addr, relMatrix):
 
     indexes = np.arange(444075)
 
-    distances = csr_matrix(np.array(getDistancesFromOutput(graph, 51).a) <= 4)
+    distances = csr_matrix(np.array(getDistancesFromOutput(graph, addr).a))
     relMatrix = csr_matrix(hstack((relMatrix, np.transpose(distances))))
 
     fromAddresses = test_set[test_set[:, 1] == addr][:, 0]
     columnIndexes = indexes[indexes != addr]
     rowIndexes = np.delete(indexes, fromAddresses)
     train_x = relMatrix[:, columnIndexes][rowIndexes, :]
-    train_y = relMatrix[:, addr][rowIndexes, :].toarray().ravel()
+    train_y = relMatrix[:, addr][rowIndexes, :].toarray().ravel() >= 1
 
+    # ch2 = SelectKBest(f_regression, 10000)
+    vt_zero_columns = VarianceThreshold()
+    train_x = vt_zero_columns.fit_transform(train_x, train_y)
+    clf = MultinomialNB()
     # clf = KNeighborsClassifier(n_neighbors=10)
-    clf = LinearSVC(class_weight="auto")
+    # clf = LinearSVC(class_weight="auto")
+    # clf = SGDClassifier(class_weight = "auto", loss = "squared_hinge")
     clf.fit(train_x, train_y)
     test_x = relMatrix[:, columnIndexes][fromAddresses, :]
-    test_y = test_set[test_set[:, 1] == addr][:, 2]
+    test_x = vt_zero_columns.transform(test_x)    
     predicted = clf.predict(test_x)
-    print(clf.score(test_x, test_y))
-    print(metrics.confusion_matrix(test_y, predicted))
+    # test_y = test_set[test_set[:, 1] == addr][:, 2] >= 1
+    # print(clf.score(test_x, test_y))
+    # print(metrics.confusion_matrix(test_y, predicted))
     # print(test_y)
     return predicted
 
 # print(predictForOutput(51, relMatrix))
+output_addresses = np.unique(test_set[:,1])
+predictions = []
+for i, address in enumerate(output_addresses):
+    print("Computed for " + str(i))
+    print("Address: " + str(address))
+    predictions.append(predictForOutput(address, relMatrix))
+
+
+# predictions = np.load("multinomialNB_predictions.npy")
+predictions = np.hstack(predictions)
+
+actual = np.hstack([test_set[test_set[:, 1] == address][:, 2] >= 1
+                    for address in output_addresses])
+
+# np.save("multinomialNB_predictions.npy", predictions)
+print(metrics.confusion_matrix(actual, predictions))
+print(classification_report(actual, predictions))
 
 # eliminate column of 'to address'
 # eliminate rows of linked 'from addresses'

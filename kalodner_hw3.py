@@ -1,6 +1,6 @@
 import numpy as np
 import scipy
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, hstack, vstack
 import graph_tool.all as gt
 from sklearn import cross_validation
 from sklearn import metrics
@@ -13,13 +13,16 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.tree import DecisionTreeClassifier
 
 def distance(g, inV, outV):
-	return gt.shortest_distance(g, source=g.vertex(inV), target=g.vertex(outV))
+    return gt.shortest_distance(g, source=g.vertex(inV), target=g.vertex(outV))
 
 def weightedDistance(g, weightsG, inV, outV):
-	return gt.shortest_distance(g, weights=weightsG, source=g.vertex(inV), target=g.vertex(outV))
+    return gt.shortest_distance(g, weights=weightsG, source=g.vertex(inV), target=g.vertex(outV))
 
 def reverseDistance(g, inV, outV):
-	return gt.shortest_distance(gt.GraphView(g, reversed=True, directed=True), source=g.vertex(inV), target=g.vertex(outV))
+    return gt.shortest_distance(gt.GraphView(g, reversed=True, directed=True), source=g.vertex(inV), target=g.vertex(outV))
+
+def getDistancesFromOutput(g, outV):
+    return gt.shortest_distance(gt.GraphView(g, reversed=True, directed=True), source=g.vertex(outV))
 
 # train_set = np.genfromtxt('txTripletsCounts.txt')
 # np.save("txTripletsCounts", train_set.astype('int64', casting='unsafe'))
@@ -38,30 +41,31 @@ rows = train_set[:,1]
 
 relMatrix = csr_matrix((data, (columns, rows)), shape=(444075, 444075))
 
-outputAddresses = np.unique(test_set[:,1])
-indexes = np.arange(444075)
+def predictForOutput(addr, relMatrix):
 
-inputRows = test_set[test_set[:,1] == 1]
-columnIndexes = indexes[indexes != 22506]
+    indexes = np.arange(444075)
 
-def predictForOutput(addr):
-	fromAddresses = test_set[test_set[:, 1] == addr][:, 0]
-	columnIndexes = indexes[indexes != addr]
-	rowIndexes = np.delete(indexes, fromAddresses)
-	train_x = relMatrix[:, columnIndexes][rowIndexes, :]
-	train_y = relMatrix[:, addr][rowIndexes, :].toarray().ravel()
+    distances = csr_matrix(np.array(getDistancesFromOutput(graph, 51).a) <= 4)
+    relMatrix = csr_matrix(hstack((relMatrix, np.transpose(distances))))
 
-	clf = KNeighborsClassifier(n_neighbors=10, p=2)
-	clf.fit(train_x, train_y)
-	test_x = relMatrix[:, columnIndexes][fromAddresses, :]
-	test_y = test_set[test_set[:, 1] == addr][:, 2]
-	predicted = clf.predict(test_x)
-	print(clf.score(test_x, test_y))
-	print(metrics.confusion_matrix(test_y, predicted))
-	# print(test_y)
-	return predicted
+    fromAddresses = test_set[test_set[:, 1] == addr][:, 0]
+    columnIndexes = indexes[indexes != addr]
+    rowIndexes = np.delete(indexes, fromAddresses)
+    train_x = relMatrix[:, columnIndexes][rowIndexes, :]
+    train_y = relMatrix[:, addr][rowIndexes, :].toarray().ravel()
 
-print(predictForOutput(3))
+    # clf = KNeighborsClassifier(n_neighbors=10)
+    clf = LinearSVC(class_weight="auto")
+    clf.fit(train_x, train_y)
+    test_x = relMatrix[:, columnIndexes][fromAddresses, :]
+    test_y = test_set[test_set[:, 1] == addr][:, 2]
+    predicted = clf.predict(test_x)
+    print(clf.score(test_x, test_y))
+    print(metrics.confusion_matrix(test_y, predicted))
+    # print(test_y)
+    return predicted
+
+# print(predictForOutput(51, relMatrix))
 
 # eliminate column of 'to address'
 # eliminate rows of linked 'from addresses'
@@ -70,7 +74,7 @@ print(predictForOutput(3))
 
 # weight = graph.new_edge_property("int32_t")
 # for edge in graph.edges():
-# 	weight[edge] = train_set[(train_set[:,0] == graph.vertex_index[edge.source()]) & (train_set[:,1] == graph.vertex_index[edge.target()]) ][0][2]
+#   weight[edge] = train_set[(train_set[:,0] == graph.vertex_index[edge.source()]) & (train_set[:,1] == graph.vertex_index[edge.target()]) ][0][2]
 
 # print("Calculated weights")
 
@@ -78,9 +82,9 @@ print(predictForOutput(3))
 # reverseDistanceList = []
 # weightedDistanceList = []
 # for x in test_set:
-# 	distanceList.append(distance(graph, x[0], x[1]))
-# 	reverseDistanceList.append(reverseDistance(graph, x[0], x[1]))
-# 	weightedDistanceList.append(weightedDistance(graph, weight, x[0], x[1]))
+#   distanceList.append(distance(graph, x[0], x[1]))
+#   reverseDistanceList.append(reverseDistance(graph, x[0], x[1]))
+#   weightedDistanceList.append(weightedDistance(graph, weight, x[0], x[1]))
 
 # print("Calculated distanceData")
 
